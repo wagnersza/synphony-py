@@ -1,19 +1,35 @@
 # AGENTS.md
 
-Guidance for AI coding agents working in **synphony-py** using **Cursor**.
+Guidance for AI coding agents working in **synphony-py** using **Claude Code, Cursor, or GitHub Copilot**.
 
 ## Repository Overview
 
-**synphony-py** is a Python implementation of the Symphony orchestrator (issue-tracker polling, per-issue workspaces, coding-agent runners). Engineering workflow guidance is in `**.cursor/rules/`** and the local `**.cursor/skills/**` copy from [addyosmani/agent-skills](https://github.com/addyosmani/agent-skills). Cursor loads rules automatically; reference skills on demand.
+**synphony-py** is a Python implementation of the Symphony orchestrator (issue-tracker polling, per-issue workspaces, coding-agent runners). Engineering workflow guidance comes from the local copy of [addyosmani/agent-skills](https://github.com/addyosmani/agent-skills), mirrored into each supported agent's discovery path.
+
+## Platform integrations
+
+- **Claude Code:** project skills live in `.claude/skills/<skill-name>/SKILL.md`; `CLAUDE.md` is the project entrypoint.
+- **Cursor:** full skills live in `.cursor/skills/<skill-name>/SKILL.md`; selected always-loaded rules live in `.cursor/rules/*.md`.
+- **GitHub Copilot:** project skills live in `.github/skills/<skill-name>/SKILL.md`; `.github/copilot-instructions.md` is the project entrypoint.
+
+Keep skill content mirrored across `.claude/skills/`, `.cursor/skills/`, and `.github/skills/` when updating or adding skills.
 
 ## Cursor integration
 
-Cursor applies Markdown files from `**.cursor/rules/**` as project context. The full upstream skills directory is copied into `**.cursor/skills/**`; open or `@`-reference `**.cursor/skills/<skill-name>/SKILL.md**` when a skill applies but is not one of the always-loaded rules.
+Cursor applies Markdown files from `.cursor/rules/` as project context. Open or `@`-reference `.cursor/skills/<skill-name>/SKILL.md` when a skill applies but is not one of the always-loaded rules.
+
+## Claude Code integration
+
+Claude Code auto-discovers project skills from `.claude/skills/`. Start with `.claude/skills/using-agent-skills/SKILL.md`, then invoke or load the matching skill by name when the user's task matches its description.
+
+## GitHub Copilot integration
+
+Copilot discovers repository skills from `.github/skills/` and also reads `.github/copilot-instructions.md`. Use the skill directory as the detailed workflow source and keep the Copilot instructions concise.
 
 ### Core rules
 
 - If a task matches a skill, follow that skill’s workflow before improvising.
-- Prefer rules already in `**.cursor/rules/**`; use the local `**.cursor/skills/**` copy for additional upstream skills.
+- Prefer the native skill directory for the current tool; in Cursor, prefer rules already in `.cursor/rules/` and use `.cursor/skills/` for additional skills.
 - Do not partially apply a skill when it applies to the task.
 
 ### Intent → skill mapping
@@ -28,9 +44,9 @@ Map user intent to skills (by rule name / `SKILL.md` folder):
 - API or interface design → `api-and-interface-design`
 - UI work → `frontend-ui-engineering`
 
-### Lifecycle (no bundled slash commands in Cursor)
+### Lifecycle
 
-Unlike Claude Code’s `/spec`, `/plan`, etc., Cursor does not ship those slash entries from this pack. Treat the lifecycle as **implicit** in how you work:
+Claude Code may expose slash commands from the upstream plugin. Cursor and Copilot should treat the lifecycle as **implicit** in how they work:
 
 - DEFINE → `spec-driven-development`
 - PLAN → `planning-and-task-breakdown`
@@ -44,7 +60,7 @@ Unlike Claude Code’s `/spec`, `/plan`, etc., Cursor does not ship those slash 
 For each request:
 
 1. Decide if a skill applies (even partially).
-2. Open the matching file under `**.cursor/rules/<name>.md`** or `@`-reference `**.cursor/skills/<skill-name>/SKILL.md**`.
+2. Open the matching file from the current tool's skill path: `.claude/skills/`, `.cursor/skills/`, or `.github/skills/`. In Cursor, use `.cursor/rules/<name>.md` first when present.
 3. Follow that workflow strictly.
 4. Only implement after required steps (spec, plan, etc.) are satisfied when the skill demands them.
 
@@ -58,15 +74,15 @@ Ignore:
 
 Correct behavior: **check for an applicable skill first**, then implement.
 
-More Cursor setup context: [agent-skills `docs/cursor-setup.md](https://github.com/addyosmani/agent-skills/blob/main/docs/cursor-setup.md)`.
+More setup context: [Cursor](https://github.com/addyosmani/agent-skills/blob/main/docs/cursor-setup.md), [Copilot](https://github.com/addyosmani/agent-skills/blob/main/docs/copilot-setup.md), and [Claude Code skills](https://docs.anthropic.com/en/docs/claude-code/skills).
 
 ## Orchestration: Personas, Skills, and Commands
 
 This repo has three composable layers. They have different jobs and should not be confused:
 
-- **Skills** — in this repo, always-loaded copies live as `**.cursor/rules/*.md`** and the full upstream copy lives as `**.cursor/skills/<name>/SKILL.md**`. The *how*. Mandatory hops when an intent matches.
-- **Personas** — see `[agents/](https://github.com/addyosmani/agent-skills/tree/main/agents)` in the upstream repo. The *who*.
-- **Slash commands** — upstream `**.claude/commands/*.md*`* (Claude Code). The *when*. The orchestration layer.
+- **Skills** — in this repo, full copies live as `.claude/skills/<name>/SKILL.md`, `.cursor/skills/<name>/SKILL.md`, and `.github/skills/<name>/SKILL.md`; selected Cursor rules also live as `.cursor/rules/*.md`. The *how*. Mandatory hops when an intent matches.
+- **Personas** — see [agents](https://github.com/addyosmani/agent-skills/tree/main/agents) in the upstream repo. The *who*.
+- **Slash commands** — upstream `.claude/commands/*.md` (Claude Code). The *when*. The orchestration layer.
 
 Composition rule: **the user (or a slash command) is the orchestrator. Personas do not invoke other personas.** A persona may invoke skills.
 
@@ -78,7 +94,7 @@ See the upstream [agents README](https://github.com/addyosmani/agent-skills/blob
 
 ## Creating a New Skill
 
-**In synphony-py:** add a new Markdown file under `**.cursor/rules/*`* (copy the `SKILL.md` body pattern from [agent-skills](https://github.com/addyosmani/agent-skills) if you like). The paths below match the **upstream** repository layout for authors contributing to that project.
+**In synphony-py:** add a new skill directory under each platform path: `.claude/skills/<skill-name>/SKILL.md`, `.cursor/skills/<skill-name>/SKILL.md`, and `.github/skills/<skill-name>/SKILL.md`. Add a matching `.cursor/rules/<skill-name>.md` only when that skill should be always loaded in Cursor. The paths below match the **upstream** repository layout for authors contributing to that project.
 
 ### Directory Structure
 

@@ -112,5 +112,10 @@ Work should follow [`PLAN.md`](PLAN.md):
 
 ## Agent Guidance
 
-Project-specific agent instructions live in [`AGENTS.md`](AGENTS.md). Cursor rules and the copied upstream agent skills live under [`.cursor/`](.cursor/).
+Project-specific agent instructions live in [`AGENTS.md`](AGENTS.md). The copied
+upstream agent skills are mirrored for the supported coding agents:
+
+- Claude Code: [`.claude/skills/`](.claude/skills/) plus [`CLAUDE.md`](CLAUDE.md).
+- Cursor: [`.cursor/skills/`](.cursor/skills/) plus selected always-loaded rules in [`.cursor/rules/`](.cursor/rules/).
+- GitHub Copilot: [`.github/skills/`](.github/skills/) plus [`.github/copilot-instructions.md`](.github/copilot-instructions.md).
 
