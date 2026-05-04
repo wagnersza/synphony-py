@@ -84,7 +84,18 @@ claude:
 ---
 ```
 
-Exact Jira fields, Claude CLI options, and provider-specific timeout keys are still subject to the `acli` and Claude CLI spikes in [`PLAN.md`](PLAN.md).
+Claude Code CLI discovery has verified `claude -p` as the non-interactive
+execution path. The production backend should use structured output
+(`--output-format json` or `stream-json`), explicit stdin handling
+(`< /dev/null` when no pipe is intended), and a non-interactive permission policy
+such as `--permission-mode dontAsk` with reviewed tool allowlists. Continuation
+turns are supported through captured `session_id` values and `--resume`, provided
+Claude Code session persistence is available. See
+[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full Claude CLI contract,
+including approval, timeout, and unsupported-spec notes.
+
+Exact Jira fields and provider-specific timeout keys are still subject to the
+remaining `acli` and backend implementation tasks in [`PLAN.md`](PLAN.md).
 See [`docs/examples/WORKFLOW.codex.md`](docs/examples/WORKFLOW.codex.md) and
 [`docs/examples/WORKFLOW.claude.md`](docs/examples/WORKFLOW.claude.md) for
 complete starting points.
