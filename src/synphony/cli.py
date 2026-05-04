@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import sys
 from collections.abc import Sequence
+from pathlib import Path
 
 from synphony.config import SynphonyConfig
 from synphony.errors import SynphonyError
@@ -22,7 +23,10 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     try:
         workflow = load_workflow(args.workflow)
-        config = SynphonyConfig.from_mapping(workflow.config)
+        config = SynphonyConfig.from_mapping(
+            workflow.config,
+            workflow_dir=Path(workflow.path).parent,
+        )
     except SynphonyError as exc:
         logger.error(
             "startup validation failed",

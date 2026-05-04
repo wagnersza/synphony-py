@@ -15,10 +15,16 @@ AgentProvider = Literal["codex", "claude"]
 @dataclass(frozen=True, slots=True)
 class SynphonyConfig:
     raw: dict[str, Any]
+    workflow_dir: Path | None = None
 
     @classmethod
-    def from_mapping(cls, mapping: dict[str, Any]) -> SynphonyConfig:
-        config = cls(raw=mapping)
+    def from_mapping(
+        cls,
+        mapping: dict[str, Any],
+        *,
+        workflow_dir: Path | None = None,
+    ) -> SynphonyConfig:
+        config = cls(raw=mapping, workflow_dir=workflow_dir)
         config._validate()
         return config
 
@@ -41,7 +47,10 @@ class SynphonyConfig:
     @property
     def workspace_root(self) -> str:
         value = self._optional_str(("workspace", "root")) or ".synphony/workspaces"
-        return str(Path(self._resolve_env(value)).expanduser())
+        resolved = Path(self._resolve_env(value)).expanduser()
+        if not resolved.is_absolute() and self.workflow_dir is not None:
+            resolved = self.workflow_dir / resolved
+        return str(resolved)
 
     @property
     def hook_after_create(self) -> str | None:

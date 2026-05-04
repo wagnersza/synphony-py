@@ -116,3 +116,78 @@ def test_config_rejects_unset_env_vars() -> None:
                 "workspace": {"root": "$UNSET_ROOT"},
             }
         )
+
+
+_BASE_CONFIG: dict[str, object] = {
+    "tracker": {"kind": "jira", "jql": "project = DEMO"},
+    "agent": {"provider": "codex"},
+    "codex": {"command": "codex app-server"},
+}
+
+
+def test_workspace_root_resolves_relative_to_workflow_dir(tmp_path: Path) -> None:
+    config = SynphonyConfig.from_mapping(
+        {**_BASE_CONFIG, "workspace": {"root": ".synphony/workspaces"}},
+        workflow_dir=tmp_path,
+    )
+
+    assert config.workspace_root == str(tmp_path / ".synphony/workspaces")
+
+
+def test_workspace_root_default_resolves_relative_to_workflow_dir(tmp_path: Path) -> None:
+    config = SynphonyConfig.from_mapping(_BASE_CONFIG, workflow_dir=tmp_path)
+
+    assert config.workspace_root == str(tmp_path / ".synphony/workspaces")
+
+
+def test_workspace_root_absolute_path_ignores_workflow_dir(tmp_path: Path) -> None:
+    config = SynphonyConfig.from_mapping(
+        {**_BASE_CONFIG, "workspace": {"root": "/absolute/path"}},
+        workflow_dir=tmp_path,
+    )
+
+    assert config.workspace_root == "/absolute/path"
+
+
+def test_workspace_root_tilde_ignores_workflow_dir(tmp_path: Path) -> None:
+    config = SynphonyConfig.from_mapping(
+        {**_BASE_CONFIG, "workspace": {"root": "~/synphony-work"}},
+        workflow_dir=tmp_path,
+    )
+
+    assert config.workspace_root == str(Path("~/synphony-work").expanduser())
+
+
+def test_workspace_root_env_var_ignores_workflow_dir(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("SYNPHONY_ROOT", "/env/path")
+
+    config = SynphonyConfig.from_mapping(
+        {**_BASE_CONFIG, "workspace": {"root": "$SYNPHONY_ROOT"}},
+        workflow_dir=tmp_path,
+    )
+
+    assert config.workspace_root == "/env/path"
+
+
+def test_workspace_root_relative_without_workflow_dir_stays_relative() -> None:
+    config = SynphonyConfig.from_mapping(
+        {**_BASE_CONFIG, "workspace": {"root": ".synphony/workspaces"}},
+    )
+
+    assert config.workspace_root == ".synphony/workspaces"
+
+
+def test_provider_command_is_not_env_expanded() -> None:
+    # Non-path command strings with $ should not be env-expanded accidentally.
+    # The current policy only expands bare "$VAR" (entire string is the ref).
+    config = SynphonyConfig.from_mapping(
+        {
+            "tracker": {"kind": "jira"},
+            "agent": {"provider": "codex"},
+            "codex": {"command": "codex --arg $SOME_VAR"},
+        }
+    )
+
+    assert config.provider_command == "codex --arg $SOME_VAR"
