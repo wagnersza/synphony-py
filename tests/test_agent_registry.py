@@ -3,7 +3,9 @@ from datetime import timedelta
 import pytest
 
 from synphony.agents.base import AgentTurnInput, AgentTurnResult
+from synphony.agents.codex import CodexBackend
 from synphony.agents.registry import AgentRegistry, create_default_registry
+from synphony.config import SynphonyConfig
 from synphony.errors import AgentNotFoundError
 from synphony.models import AgentEvent, Issue, Workspace
 
@@ -67,6 +69,27 @@ def test_default_registry_reserves_v1_provider_keys() -> None:
     registry = create_default_registry()
 
     assert sorted(registry.provider_ids) == ["claude", "codex"]
+    assert isinstance(registry.get("codex"), CodexBackend)
+
+
+def test_default_registry_uses_codex_settings_from_config() -> None:
+    config = SynphonyConfig.from_mapping(
+        {
+            "tracker": {"kind": "jira", "jql": "project = DEMO"},
+            "agent": {"provider": "codex"},
+            "codex": {
+                "command": "custom-codex app-server",
+                "approval_policy": "never",
+                "turn_timeout_ms": 42,
+            },
+        }
+    )
+    backend = create_default_registry(config).get("codex")
+
+    assert isinstance(backend, CodexBackend)
+    assert backend.command == "custom-codex app-server"
+    assert backend.approval_policy == "never"
+    assert backend.turn_timeout_ms == 42
 
 
 def test_turn_result_tracks_events() -> None:

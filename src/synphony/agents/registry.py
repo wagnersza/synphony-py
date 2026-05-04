@@ -6,6 +6,8 @@ from dataclasses import dataclass
 from datetime import timedelta
 
 from synphony.agents.base import AgentBackend, AgentTurnInput, AgentTurnResult
+from synphony.agents.codex import CodexBackend
+from synphony.config import SynphonyConfig
 from synphony.errors import AgentNotFoundError, AgentProtocolError
 
 
@@ -56,8 +58,20 @@ class _ReservedProviderBackend:
         return None
 
 
-def create_default_registry() -> AgentRegistry:
+def create_default_registry(config: SynphonyConfig | None = None) -> AgentRegistry:
     registry = AgentRegistry()
-    registry.register(_ReservedProviderBackend(provider="codex"))
+    if config is None:
+        registry.register(CodexBackend())
+    else:
+        registry.register(
+            CodexBackend(
+                command=config.codex_command,
+                approval_policy=config.codex_approval_policy,
+                thread_sandbox=config.codex_thread_sandbox,
+                turn_sandbox_policy=config.codex_turn_sandbox_policy,
+                read_timeout_ms=config.codex_read_timeout_ms,
+                turn_timeout_ms=config.codex_turn_timeout_ms,
+            )
+        )
     registry.register(_ReservedProviderBackend(provider="claude"))
     return registry

@@ -56,6 +56,13 @@ agent:
 
 codex:
   command: codex app-server
+  approval_policy: never
+  thread_sandbox: read-only
+  turn_sandbox_policy:
+    type: workspaceWrite
+    networkAccess: false
+  read_timeout_ms: 30000
+  turn_timeout_ms: 3600000
 ---
 ```
 

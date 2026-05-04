@@ -53,3 +53,31 @@ path safety layer rejects parent traversal and verifies every computed path
 remains under the configured root. Lifecycle hooks run with the workspace as
 `cwd`, through a configurable shell tuple, and with a timeout. Removal runs the
 `before_remove` hook before deleting the workspace best-effort.
+
+## Phase 5: Codex App-Server Backend
+
+`synphony.agents.codex.CodexBackend` is the first real `AgentBackend`
+implementation. It launches `bash -lc <codex.command>` with `cwd` set to the
+issue workspace, keeps stdout as the JSON-line protocol stream, and drains
+stderr separately so non-protocol output cannot corrupt protocol parsing.
+
+Startup follows the Codex app-server sequence used by the Elixir reference:
+
+1. Send `initialize`, then `initialized`.
+2. Send `thread/start` with the workspace `cwd` plus configured approval and
+   thread sandbox values.
+3. Send `turn/start` with the prompt, issue title, workspace `cwd`, and optional
+   turn sandbox policy.
+
+The backend normalizes app-server updates into `AgentEvent` values with provider
+`codex`, `session_id` built from the Codex thread and turn ids, optional usage,
+and optional rate-limit data. Successful turns leave the app-server process alive
+for `continue_session()` on the same thread; `stop_session()` terminates it.
+
+Policy for non-interactive operation is conservative:
+
+- Approval requests are auto-approved only when `codex.approval_policy` is
+  `never`, matching the high-trust non-interactive behavior from the reference.
+- Operator input requests fail the turn immediately with `AgentProtocolError`.
+- Unsupported client-side tool calls receive a structured failure response so
+  the Codex turn can keep streaming instead of hanging.

@@ -34,6 +34,30 @@ def test_config_validates_selected_claude_provider() -> None:
     assert config.provider_command == "claude --print"
 
 
+def test_config_exposes_codex_runtime_settings() -> None:
+    config = SynphonyConfig.from_mapping(
+        {
+            "tracker": {"kind": "jira", "jql": "project = DEMO"},
+            "agent": {"provider": "codex"},
+            "codex": {
+                "command": "codex --config model=gpt-5.5 app-server",
+                "approval_policy": "never",
+                "thread_sandbox": "read-only",
+                "turn_sandbox_policy": {"type": "workspaceWrite", "networkAccess": False},
+                "read_timeout_ms": 1234,
+                "turn_timeout_ms": 5678,
+            },
+        }
+    )
+
+    assert config.codex_command == "codex --config model=gpt-5.5 app-server"
+    assert config.codex_approval_policy == "never"
+    assert config.codex_thread_sandbox == "read-only"
+    assert config.codex_turn_sandbox_policy == {"type": "workspaceWrite", "networkAccess": False}
+    assert config.codex_read_timeout_ms == 1234
+    assert config.codex_turn_timeout_ms == 5678
+
+
 def test_config_rejects_unsupported_tracker() -> None:
     with pytest.raises(ConfigValidationError, match="tracker.kind"):
         SynphonyConfig.from_mapping(
