@@ -51,6 +51,18 @@ class JiraQueryFailedError(SynphonyError):
     code = "jira_query_failed"
 
 
+class TrackerParseError(SynphonyError):
+    code = "tracker_parse_error"
+
+
+class WorkspacePathError(SynphonyError):
+    code = "workspace_path_error"
+
+
+class WorkspaceHookError(SynphonyError):
+    code = "workspace_hook_error"
+
+
 class AgentError(SynphonyError):
     code = "agent_error"
 

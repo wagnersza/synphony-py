@@ -1,0 +1,36 @@
+{
+  "issues": [
+    {
+      "id": "10001",
+      "key": "DEMO-1",
+      "fields": {
+        "summary": "Build tracker",
+        "description": "Tracker details",
+        "status": {
+          "name": "Ready"
+        },
+        "created": "2026-05-04T10:00:00.000+0000",
+        "updated": "2026-05-04T11:00:00.000+0000",
+        "priority": {
+          "name": "High",
+          "id": "2"
+        },
+        "labels": [
+          "backend",
+          "phase-2"
+        ],
+        "issuelinks": [
+          {
+            "type": {
+              "inward": "is blocked by"
+            },
+            "inwardIssue": {
+              "key": "DEMO-0"
+            }
+          }
+        ]
+      },
+      "self": "https://jira.example/rest/api/issue/10001"
+    }
+  ]
+}
