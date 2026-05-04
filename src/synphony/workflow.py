@@ -29,7 +29,7 @@ def load_workflow(path: str | Path) -> WorkflowDefinition:
 
 def _split_front_matter(text: str) -> tuple[dict[str, Any], str]:
     if not text.startswith("---\n"):
-        raise WorkflowParseError("workflow must start with YAML front matter")
+        return {}, text.strip()
 
     try:
         _, yaml_text, body = text.split("---", 2)
@@ -44,4 +44,4 @@ def _split_front_matter(text: str) -> tuple[dict[str, Any], str]:
     if not isinstance(parsed, dict):
         raise WorkflowParseError("workflow front matter must be a YAML mapping")
 
-    return parsed, body.lstrip("\n")
+    return parsed, body.strip()

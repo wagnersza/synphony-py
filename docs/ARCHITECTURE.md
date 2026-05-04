@@ -1,5 +1,53 @@
 # synphony-py Architecture Notes
 
+## Jira and Claude Compliance Profile
+
+`synphony-py` follows the Symphony orchestration model while choosing Jira and
+Claude Code as explicit production extensions to the upstream Linear/Codex
+profile. `tracker.kind: jira` preserves the shared tracker contract: fetch
+dispatch candidates, fetch issues by configured terminal states for startup
+cleanup, and refresh running issue states by id for reconciliation. Jira status
+names are configured directly as workflow active and terminal state names.
+
+`agent.provider: claude` is the production agent-provider extension for this
+repository. It must implement the provider-neutral `AgentBackend` contract:
+start a first turn from the per-issue workspace, continue or fail continuation
+turns according to the documented Claude CLI capability, emit normalized agent
+events, respect configured timeouts, and surface missing executable, nonzero
+exit, timeout, approval, and user-input-required outcomes as typed failures or
+events. Until the Claude CLI spike is complete, production policy is conservative:
+headless runs must not wait indefinitely for approvals or interactive user input;
+approval or user-input-required states should fail clearly and be retried or
+handled by the orchestrator policy rather than blocking a worker forever.
+
+The long-running `synphony <WORKFLOW.md>` service is the production path. A
+future `--once` mode may exist only as a local smoke-test helper that attempts at
+most one issue and exits; it is not the scheduler/runner service described by
+the spec.
+
+Ticket writes are outside the orchestrator boundary. Jira transitions, comments,
+and PR links should be made by the coding agent through workflow instructions or
+explicit tools. Hidden scheduler business logic should not mutate Jira tickets.
+
+Workflow front matter is optional. When it is absent, the whole file is treated
+as the prompt and config defaults apply where possible. Relative
+`workspace.root` values resolve from the selected workflow file's directory;
+`~` and environment variables are expanded only for path fields. Hook commands
+live under the top-level `hooks` block, not under `workspace.hooks`.
+
+Runtime config defaults:
+
+- `workspace.root`: `.synphony/workspaces`
+- `tracker.active_states`: `["Ready"]`
+- `tracker.terminal_states`: `["Done", "Canceled"]`
+- `polling.interval_ms`: `5000`
+- `agent.max_concurrent_agents`: `1`
+- `agent.max_concurrent_agents_by_state`: `{}`
+- `agent.max_turns`: `20`
+- `agent.max_retry_backoff_ms`: `60000`
+- `hooks.timeout_ms`: `60000`
+- `<provider>.timeout_ms`: unset, meaning the backend default applies
+
 ## Phase 2: Tracker and Workspace Foundation
 
 The orchestrator talks to trackers through `synphony.tracker.base.Tracker`.

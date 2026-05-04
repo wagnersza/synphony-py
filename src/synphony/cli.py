@@ -22,7 +22,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     try:
         workflow = load_workflow(args.workflow)
-        config = SynphonyConfig.from_mapping(workflow.config)
+        config = SynphonyConfig.from_mapping(workflow.config, workflow_path=workflow.path)
     except SynphonyError as exc:
         logger.error(
             "startup validation failed",

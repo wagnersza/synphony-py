@@ -46,7 +46,14 @@ def test_workflow_store_keeps_last_good_workflow_on_invalid_reload(tmp_path: Pat
     store = WorkflowStore(workflow_path)
     initial = store.load().workflow
 
-    workflow_path.write_text("invalid", encoding="utf-8")
+    workflow_path.write_text(
+        """---
+- invalid
+---
+Prompt
+""",
+        encoding="utf-8",
+    )
     result = store.reload_if_changed()
 
     assert result.changed is False

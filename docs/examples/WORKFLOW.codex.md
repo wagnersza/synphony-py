@@ -10,8 +10,9 @@ tracker:
 
 workspace:
   root: .synphony/workspaces
-  hooks:
-    before_run: uv sync
+
+hooks:
+  before_run: uv sync
 
 agent:
   provider: codex

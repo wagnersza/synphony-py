@@ -8,8 +8,10 @@ This repository is currently in the migration/bootstrap stage. The implementatio
 
 The first usable milestone keeps the core Symphony model but adapts two product choices:
 
-- **Issue tracker:** Jira through the Atlassian CLI, `acli`.
-- **Coding agents:** pluggable agent backend interface with v1 support for `codex` and `claude` only.
+- **Issue tracker:** Jira through the Atlassian CLI, `acli`, as an explicit
+  tracker extension to the upstream spec.
+- **Coding agents:** pluggable agent backend interface with Claude Code as the
+  production provider extension and Codex kept as a supported provider slot.
 
 Future providers such as GitHub Copilot CLI, Pi.dev, and OpenCode should be reserved in the design but not implemented in the first pass.
 
@@ -37,20 +39,25 @@ uv run ruff format --check .
 uv run mypy
 ```
 
-Validate a workflow before starting the daemon path:
+Validate a workflow before starting the service path:
 
 ```bash
 uv run synphony --check docs/examples/WORKFLOW.codex.md
 uv run synphony --check docs/examples/WORKFLOW.claude.md
 ```
 
-The `synphony` run mode is intentionally disabled until the real Codex and
-Claude backends are implemented. `--check` is available now for workflow/config
-validation.
+The long-running `synphony <WORKFLOW.md>` service is the production path. It is
+intentionally disabled until the real provider backends and service loop are
+implemented. `--check` is available now for workflow/config validation. A future
+`--once` command, if added, is only a local smoke-test helper and not production
+daemon behavior.
 
 ## Workflow Configuration
 
-`synphony-py` will load a repository-owned `WORKFLOW.md` with YAML front matter plus a prompt body. The workflow selects the tracker and agent provider.
+`synphony-py` loads a repository-owned `WORKFLOW.md`. YAML front matter is
+optional; when it is absent, the whole file is treated as the prompt and config
+defaults apply where possible. When front matter is present, it selects the
+tracker, agent provider, runtime limits, and hooks.
 
 Minimal shape for Codex:
 
@@ -59,6 +66,12 @@ Minimal shape for Codex:
 tracker:
   kind: jira
   jql: 'project = ABC AND status = "Ready"'
+
+workspace:
+  root: .synphony/workspaces
+
+hooks:
+  before_run: uv sync
 
 agent:
   provider: codex
@@ -76,6 +89,12 @@ tracker:
   kind: jira
   jql: 'project = ABC AND status = "Ready"'
 
+workspace:
+  root: .synphony/workspaces
+
+hooks:
+  before_run: uv sync
+
 agent:
   provider: claude
 
@@ -84,7 +103,14 @@ claude:
 ---
 ```
 
-Exact Jira fields, Claude CLI options, and provider-specific timeout keys are still subject to the `acli` and Claude CLI spikes in [`PLAN.md`](PLAN.md).
+Relative `workspace.root` values resolve from the selected workflow file's
+directory. `~` and environment variables are expanded for path fields, not for
+command strings such as provider commands or hooks. Hook commands use the
+top-level `hooks` block; `workspace.hooks` is unsupported.
+
+Exact Jira fields, Claude CLI options, approval/user-input behavior, and
+provider-specific timeout keys are still subject to the `acli` and Claude CLI
+spikes in [`PLAN.md`](PLAN.md).
 See [`docs/examples/WORKFLOW.codex.md`](docs/examples/WORKFLOW.codex.md) and
 [`docs/examples/WORKFLOW.claude.md`](docs/examples/WORKFLOW.claude.md) for
 complete starting points.

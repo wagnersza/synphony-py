@@ -39,12 +39,37 @@ def test_load_workflow_rejects_missing_file(tmp_path: Path) -> None:
         load_workflow(tmp_path / "missing.md")
 
 
-def test_load_workflow_rejects_missing_front_matter(tmp_path: Path) -> None:
+def test_load_workflow_accepts_missing_front_matter_as_prompt(tmp_path: Path) -> None:
     workflow_path = tmp_path / "WORKFLOW.md"
-    workflow_path.write_text("No front matter", encoding="utf-8")
+    workflow_path.write_text("\n\nNo front matter\n", encoding="utf-8")
 
-    with pytest.raises(WorkflowParseError, match="front matter"):
-        load_workflow(workflow_path)
+    workflow = load_workflow(workflow_path)
+
+    assert workflow.config == {}
+    assert workflow.prompt_template == "No front matter"
+
+
+def test_load_workflow_trims_front_matter_prompt_body(tmp_path: Path) -> None:
+    workflow_path = tmp_path / "WORKFLOW.md"
+    workflow_path.write_text(
+        """---
+tracker:
+  kind: jira
+agent:
+  provider: claude
+claude:
+  command: claude
+---
+
+Prompt body
+
+""",
+        encoding="utf-8",
+    )
+
+    workflow = load_workflow(workflow_path)
+
+    assert workflow.prompt_template == "Prompt body"
 
 
 def test_load_workflow_rejects_non_mapping_front_matter(tmp_path: Path) -> None:

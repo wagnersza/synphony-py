@@ -19,3 +19,13 @@ def test_example_workflows_parse_and_validate() -> None:
         assert config.agent_provider in {"claude", "codex"}
         assert config.provider_command
         assert "{{ issue.identifier }}" in workflow.prompt_template
+
+
+def test_minimal_no_front_matter_workflow_parses_as_prompt(tmp_path: Path) -> None:
+    workflow_path = tmp_path / "WORKFLOW.md"
+    workflow_path.write_text("Work on {{ issue.identifier }}.", encoding="utf-8")
+
+    workflow = load_workflow(workflow_path)
+
+    assert workflow.config == {}
+    assert workflow.prompt_template == "Work on {{ issue.identifier }}."
