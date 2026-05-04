@@ -43,6 +43,13 @@ The `synphony` console script is reserved but not wired to the orchestrator yet.
 
 `synphony-py` will load a repository-owned `WORKFLOW.md` with YAML front matter plus a prompt body. The workflow selects the tracker and agent provider.
 
+Provider-specific examples live under `docs/examples/`:
+
+- [`WORKFLOW.codex.md`](docs/examples/WORKFLOW.codex.md) uses Jira plus the Codex app-server backend.
+- [`WORKFLOW.claude.md`](docs/examples/WORKFLOW.claude.md) uses Jira plus the Claude Code CLI backend.
+
+Both examples include Jira active and terminal states, workspace root and hooks, polling, concurrency settings, and provider-specific timeout blocks. Copy one to `WORKFLOW.md` and adjust the Jira JQL, state names, workspace path, and command for your environment.
+
 Minimal shape for Codex:
 
 ```yaml
@@ -75,7 +82,7 @@ claude:
 ---
 ```
 
-Exact Jira fields, Claude CLI options, and provider-specific timeout keys are still subject to the `acli` and Claude CLI spikes in [`PLAN.md`](PLAN.md).
+Exact Jira fields, Claude CLI options, and provider-specific timeout keys are still subject to the `acli` and Claude CLI spikes in [`PLAN.md`](PLAN.md). The checked-in examples are parsed by the unit test suite so schema drift is caught during CI.
 
 ## Architecture
 
@@ -109,6 +116,23 @@ Work should follow [`PLAN.md`](PLAN.md):
 4. Prove orchestrator behavior with memory/fake implementations before real CLIs.
 5. Add Jira `acli`, Codex app-server, and Claude Code CLI integrations.
 6. Add CLI, logging, examples, CI, and final release checks.
+
+## CI
+
+GitHub Actions runs the default local verification commands on push and pull request:
+
+```bash
+uv run pytest
+uv run ruff check .
+uv run ruff format --check .
+uv run mypy
+```
+
+The default suite is fixture-only and does not require Jira, Codex, or Claude credentials. Real `acli` or provider smoke tests should be added behind an explicit integration marker or manual workflow when those adapters land.
+
+## Release Readiness
+
+The current Phase 7 readiness pass is tracked in [`docs/RELEASE_READINESS.md`](docs/RELEASE_READINESS.md). It records which first-usable milestone criteria are covered in this worktree and which remain blocked by earlier implementation phases.
 
 ## Agent Guidance
 

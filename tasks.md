@@ -241,6 +241,8 @@ Minimum bar before calling the migration “usable”:
 
 **Not required for first usable:** GitHub Copilot, Pi.dev, OpenCode, or any other third agent CLI.
 
+Current release-readiness status is tracked in [`docs/RELEASE_READINESS.md`](docs/RELEASE_READINESS.md). Phase 7 examples and default CI are present; remaining first-usable milestone items still depend on the Jira tracker, workspace manager, real agent backends, orchestrator, and structured logging work from earlier phases.
+
 ---
 
 ## Open questions (resolve during spikes)
