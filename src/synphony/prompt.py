@@ -38,6 +38,20 @@ def render_prompt(template: str, *, issue: Issue, attempt: RunAttempt) -> str:
     return _VARIABLE_PATTERN.sub(replace, template)
 
 
+def build_first_prompt(template: str, *, issue: Issue, attempt: RunAttempt) -> str:
+    """Build the first provider prompt from the workflow template."""
+    return render_prompt(template, issue=issue, attempt=attempt)
+
+
+def build_continuation_prompt(*, issue: Issue, attempt: RunAttempt) -> str:
+    """Build provider-agnostic continuation guidance for follow-up turns."""
+    return (
+        f"Continue work on {issue.identifier} from the existing session. "
+        f"This is attempt {attempt.attempt}; do not restart completed work. "
+        "Inspect the workspace, continue from the current state, and stop when the task is done."
+    )
+
+
 def _resolve_variable(variable: str, context: dict[str, object]) -> object:
     parts = variable.split(".")
     current: object = context.get(parts[0], _Missing)
