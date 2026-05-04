@@ -3,23 +3,27 @@
 from __future__ import annotations
 
 from collections.abc import Collection, Iterable
+from dataclasses import replace
 from datetime import datetime
 
 from synphony.models import Issue, normalize_state_name
+from synphony.tracker.base import Tracker
 
 
-class MemoryTracker:
+class MemoryTracker(Tracker):
     """A small tracker fake that preserves issue shape without external I/O."""
 
     def __init__(
         self,
         issues: Iterable[Issue] = (),
         *,
-        active_state_names: Collection[str],
+        active_state_names: Collection[str] | None = None,
         terminal_state_names: Collection[str] = (),
     ) -> None:
         self._issues: dict[str, Issue] = {issue.id: issue for issue in issues}
-        self._active_states = _normalize_states(active_state_names)
+        self._active_states = (
+            _normalize_states(active_state_names) if active_state_names is not None else None
+        )
         self._terminal_states = _normalize_states(terminal_state_names)
 
     @property
@@ -30,11 +34,9 @@ class MemoryTracker:
         self._issues[issue.id] = issue
 
     def fetch_candidate_issues(self) -> list[Issue]:
-        issues = [
-            issue
-            for issue in self._issues.values()
-            if issue.normalized_state in self._active_states
-        ]
+        issues = list(self._issues.values())
+        if self._active_states is not None:
+            issues = [issue for issue in issues if issue.normalized_state in self._active_states]
         return sorted(issues, key=_candidate_sort_key)
 
     def fetch_issues_by_states(self, state_names: Collection[str]) -> list[Issue]:
@@ -47,6 +49,12 @@ class MemoryTracker:
             for issue_id in issue_ids
             if issue_id in self._issues
         }
+
+    def set_issue_state(self, issue_id: str, state: str) -> None:
+        self._issues[issue_id] = replace(self._issues[issue_id], state=state)
+
+    def upsert_issue(self, issue: Issue) -> None:
+        self._issues[issue.id] = issue
 
 
 def _normalize_states(state_names: Collection[str]) -> set[str]:

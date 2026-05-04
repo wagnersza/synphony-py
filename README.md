@@ -2,7 +2,7 @@
 
 `synphony-py` is the planned Python implementation of Symphony: a long-running orchestration service that polls an issue tracker, creates isolated per-issue workspaces, and runs coding-agent sessions to move work forward.
 
-This repository is currently in the migration/bootstrap stage. The implementation plan is tracked in [`PLAN.md`](PLAN.md), with the source backlog in [`tasks.md`](tasks.md). The target behavior follows the language-agnostic Symphony specification at [`../symphony/SPEC.md`](../symphony/SPEC.md) and uses the Elixir implementation under [`../symphony/elixir`](../symphony/elixir) as the reference port.
+This repository is currently in the migration/bootstrap stage. The implementation plan is tracked in `[PLAN.md](PLAN.md)`, with the source backlog in `[tasks.md](tasks.md)`. The target behavior follows the language-agnostic Symphony specification at `[../symphony/SPEC.md](../symphony/SPEC.md)` and uses the Elixir implementation under `[../symphony/elixir](../symphony/elixir)` as the reference port.
 
 ## Scope
 
@@ -37,7 +37,13 @@ uv run ruff format --check .
 uv run mypy
 ```
 
-The `synphony` console script is reserved but not wired to the orchestrator yet. CLI execution is planned for Phase 6 in [`PLAN.md`](PLAN.md).
+Run the daemon against a workflow file:
+
+```bash
+uv run synphony ./WORKFLOW.md --logs-root .synphony/logs
+```
+
+The workflow path defaults to `./WORKFLOW.md`. Pass `--port <port>` to enable the optional local HTTP status surface.
 
 ## Workflow Configuration
 
@@ -56,6 +62,13 @@ agent:
 
 codex:
   command: codex app-server
+  approval_policy: never
+  thread_sandbox: read-only
+  turn_sandbox_policy:
+    type: workspaceWrite
+    networkAccess: false
+  read_timeout_ms: 30000
+  turn_timeout_ms: 3600000
 ---
 ```
 
@@ -75,7 +88,7 @@ claude:
 ---
 ```
 
-Exact Jira fields, Claude CLI options, and provider-specific timeout keys are still subject to the `acli` and Claude CLI spikes in [`PLAN.md`](PLAN.md).
+Exact Jira fields, Claude CLI options, and provider-specific timeout keys are still subject to the `acli` and Claude CLI spikes in `[PLAN.md](PLAN.md)`.
 
 ## Architecture
 
@@ -101,7 +114,7 @@ The orchestrator should depend on stable internal protocols rather than concrete
 
 ## Development Plan
 
-Work should follow [`PLAN.md`](PLAN.md):
+Work should follow `[PLAN.md](PLAN.md)`:
 
 1. Reconcile the SPEC with Jira and multi-backend support.
 2. Bootstrap the Python project and tooling.
@@ -112,10 +125,10 @@ Work should follow [`PLAN.md`](PLAN.md):
 
 ## Agent Guidance
 
-Project-specific agent instructions live in [`AGENTS.md`](AGENTS.md). The copied
+Project-specific agent instructions live in `[AGENTS.md](AGENTS.md)`. The copied
 upstream agent skills are mirrored for the supported coding agents:
 
-- Claude Code: [`.claude/skills/`](.claude/skills/) plus [`CLAUDE.md`](CLAUDE.md).
-- Cursor: [`.cursor/skills/`](.cursor/skills/) plus selected always-loaded rules in [`.cursor/rules/`](.cursor/rules/).
-- GitHub Copilot: [`.github/skills/`](.github/skills/) plus [`.github/copilot-instructions.md`](.github/copilot-instructions.md).
+- Claude Code: `[.claude/skills/](.claude/skills/)` plus `[CLAUDE.md](CLAUDE.md)`.
+- Cursor: `[.cursor/skills/](.cursor/skills/)` plus selected always-loaded rules in `[.cursor/rules/](.cursor/rules/)`.
+- GitHub Copilot: `[.github/skills/](.github/skills/)` plus `[.github/copilot-instructions.md](.github/copilot-instructions.md)`.
 

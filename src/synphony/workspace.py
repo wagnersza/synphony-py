@@ -8,8 +8,9 @@ from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from pathlib import Path
 
+from synphony.config import SynphonyConfig
 from synphony.errors import WorkspaceHookError
-from synphony.models import Workspace, workspace_key_from_identifier
+from synphony.models import Issue, Workspace, workspace_key_from_identifier
 from synphony.path_safety import reject_path_traversal, safe_child_path
 
 
@@ -37,14 +38,28 @@ class WorkspaceManager:
 
     def __init__(
         self,
+        config: SynphonyConfig | None = None,
         *,
-        root: str | Path,
+        root: str | Path | None = None,
         hooks: WorkspaceHooks | None = None,
         runner: HookRunner | None = None,
         hook_timeout_s: float = 30,
         hook_shell: tuple[str, str] = ("sh", "-lc"),
     ) -> None:
-        self._root = Path(root).expanduser()
+        if config is not None:
+            root = config.workspace_root
+            configured_hooks = config.workspace_hooks
+            hooks = WorkspaceHooks(
+                after_create=configured_hooks.get("after_create"),
+                before_run=configured_hooks.get("before_run"),
+                after_run=configured_hooks.get("after_run"),
+                before_remove=configured_hooks.get("before_remove"),
+            )
+            hook_timeout_s = config.workspace_hook_timeout_ms / 1000
+        if root is None:
+            raise TypeError("WorkspaceManager requires either config or root")
+
+        self._root = Path(root).expanduser().resolve()
         self._hooks = hooks or WorkspaceHooks()
         self._runner = runner or self._build_subprocess_runner(hook_shell)
         self._hook_timeout_s = hook_timeout_s
@@ -54,22 +69,28 @@ class WorkspaceManager:
         return self._root
 
     def prepare(self, issue_identifier: str) -> Workspace:
-        reject_path_traversal(issue_identifier)
-        key = workspace_key_from_identifier(issue_identifier)
-        path = safe_child_path(self._root, key)
-        created_now = not path.exists()
-        path.mkdir(parents=True, exist_ok=True)
-
-        workspace = Workspace(path=str(path), key=key, created_now=created_now)
-        if created_now:
+        workspace = self._prepare_by_identifier(issue_identifier)
+        if workspace.created_now:
             self._run_hook(self._hooks.after_create, workspace)
         return workspace
 
+    def workspace_for_issue(self, issue: Issue) -> Workspace:
+        key = workspace_key_from_identifier(issue.identifier)
+        path = safe_child_path(self._root, key)
+        return Workspace(path=str(path), key=key, created_now=False)
+
+    def prepare_workspace(self, issue: Issue) -> Workspace:
+        return self._prepare_by_identifier(issue.identifier)
+
+    def run_hook(self, name: str, workspace: Workspace) -> None:
+        command = getattr(self._hooks, name, None)
+        self._run_hook(command, workspace)
+
     def run_before_run(self, workspace: Workspace) -> None:
-        self._run_hook(self._hooks.before_run, workspace)
+        self.run_hook("before_run", workspace)
 
     def run_after_run(self, workspace: Workspace) -> None:
-        self._run_hook(self._hooks.after_run, workspace)
+        self.run_hook("after_run", workspace)
 
     def remove(self, workspace: Workspace) -> bool:
         path = safe_child_path(self._root, workspace.key)
@@ -80,17 +101,29 @@ class WorkspaceManager:
         shutil.rmtree(path, ignore_errors=True)
         return not path.exists()
 
+    def cleanup_workspace(self, workspace: Workspace) -> None:
+        self.remove(workspace)
+
     def cleanup_terminal_workspaces(self, issue_identifiers: Iterable[str]) -> list[str]:
         removed: list[str] = []
         for identifier in issue_identifiers:
+            key = workspace_key_from_identifier(identifier)
             workspace = Workspace(
-                path=str(safe_child_path(self._root, workspace_key_from_identifier(identifier))),
-                key=workspace_key_from_identifier(identifier),
+                path=str(safe_child_path(self._root, key)),
+                key=key,
                 created_now=False,
             )
             if self.remove(workspace):
                 removed.append(workspace.path)
         return removed
+
+    def _prepare_by_identifier(self, issue_identifier: str) -> Workspace:
+        reject_path_traversal(issue_identifier)
+        key = workspace_key_from_identifier(issue_identifier)
+        path = safe_child_path(self._root, key)
+        created_now = not path.exists()
+        path.mkdir(parents=True, exist_ok=True)
+        return Workspace(path=str(path), key=key, created_now=created_now)
 
     def _run_hook(self, command: str | None, workspace: Workspace) -> None:
         if command is None:

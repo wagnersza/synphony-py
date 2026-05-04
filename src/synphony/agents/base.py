@@ -1,13 +1,14 @@
-"""Provider-agnostic agent backend protocol."""
+"""Provider-agnostic agent backend boundary."""
 
 from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from typing import Protocol
 
-from synphony.models import AgentEvent, Issue, Workspace
+from synphony.models import AgentEvent, Issue, RunAttempt, Workspace
 
 AgentEventCallback = Callable[[AgentEvent], None]
 
@@ -51,12 +52,32 @@ class AgentTurnInput:
 
 
 @dataclass(frozen=True, slots=True)
+class AgentTurnRequest:
+    provider: str
+    cwd: Path
+    issue: Issue
+    workspace: Workspace
+    attempt: RunAttempt
+    prompt: str
+    turn_number: int
+    max_turns: int
+    session_id: str | None
+    on_event: Callable[[AgentEvent], None]
+    turn_timeout_ms: int | None = None
+    stall_timeout_ms: int | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class AgentTurnResult:
     """Normalized result from a provider turn."""
 
     session_id: str
-    events: tuple[AgentEvent, ...]
+    events: tuple[AgentEvent, ...] = ()
     turn_id: str | None = None
+    completed: bool = True
+    exit_code: int = 0
+    message: str | None = None
+    raw_events: tuple[dict[str, object], ...] = ()
 
     @staticmethod
     def now() -> datetime:
@@ -64,7 +85,7 @@ class AgentTurnResult:
 
 
 class AgentBackend(Protocol):
-    """Backend contract consumed by the future provider-agnostic runner."""
+    """Backend contract consumed by the provider-agnostic runner."""
 
     @property
     def provider(self) -> str:
@@ -76,5 +97,16 @@ class AgentBackend(Protocol):
     def continue_session(self, turn: AgentTurnInput) -> AgentTurnResult:
         """Run a continuation turn against an existing session."""
 
-    def stop_session(self, session_id: str, *, timeout: timedelta | None = None) -> None:
-        """Stop or interrupt a provider session if the backend supports it."""
+    def run_turn(self, request: AgentTurnRequest) -> AgentTurnResult:
+        """Run one provider turn in the issue workspace."""
+        ...
+
+    def stop_session(
+        self,
+        session_id: str,
+        *,
+        cwd: Path | None = None,
+        timeout: timedelta | None = None,
+    ) -> None:
+        """Best-effort stop for a live provider session."""
+        ...

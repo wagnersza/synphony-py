@@ -1,9 +1,13 @@
 from datetime import timedelta
+from pathlib import Path
 
 import pytest
 
-from synphony.agents.base import AgentTurnInput, AgentTurnResult
+from synphony.agents.base import AgentTurnInput, AgentTurnRequest, AgentTurnResult
+from synphony.agents.claude import ClaudeBackend
+from synphony.agents.codex import CodexBackend
 from synphony.agents.registry import AgentRegistry, create_default_registry
+from synphony.config import SynphonyConfig
 from synphony.errors import AgentNotFoundError
 from synphony.models import AgentEvent, Issue, Workspace
 
@@ -20,7 +24,16 @@ class _Backend:
     def continue_session(self, turn: AgentTurnInput) -> AgentTurnResult:
         return AgentTurnResult(session_id=turn.session_id or "missing", events=())
 
-    def stop_session(self, session_id: str, *, timeout: timedelta | None = None) -> None:
+    def run_turn(self, request: AgentTurnRequest) -> AgentTurnResult:
+        return AgentTurnResult(session_id=f"{self.provider}:session", events=())
+
+    def stop_session(
+        self,
+        session_id: str,
+        *,
+        cwd: Path | None = None,
+        timeout: timedelta | None = None,
+    ) -> None:
         self.stopped.append(session_id)
 
 
@@ -63,10 +76,52 @@ def test_registry_reports_unsupported_provider() -> None:
     assert exc_info.value.details == {"provider": "opencode"}
 
 
-def test_default_registry_reserves_v1_provider_keys() -> None:
+def test_default_registry_registers_v1_provider_keys() -> None:
     registry = create_default_registry()
 
     assert sorted(registry.provider_ids) == ["claude", "codex"]
+    assert isinstance(registry.get("codex"), CodexBackend)
+    assert isinstance(registry.get("claude"), ClaudeBackend)
+
+
+def test_default_registry_uses_codex_settings_from_config() -> None:
+    config = SynphonyConfig.from_mapping(
+        {
+            "tracker": {"kind": "jira", "jql": "project = DEMO"},
+            "agent": {"provider": "codex"},
+            "codex": {
+                "command": "custom-codex app-server",
+                "approval_policy": "never",
+                "turn_timeout_ms": 42,
+            },
+        }
+    )
+    backend = create_default_registry(config).get("codex")
+
+    assert isinstance(backend, CodexBackend)
+    assert backend.command == "custom-codex app-server"
+    assert backend.approval_policy == "never"
+    assert backend.turn_timeout_ms == 42
+
+
+def test_default_registry_uses_claude_settings_from_config() -> None:
+    config = SynphonyConfig.from_mapping(
+        {
+            "tracker": {"kind": "jira", "jql": "project = DEMO"},
+            "agent": {"provider": "claude"},
+            "claude": {
+                "command": "custom-claude",
+                "turn_timeout_ms": 42,
+                "allowed_tools": ["jira"],
+            },
+        }
+    )
+    backend = create_default_registry(config).get("claude")
+
+    assert isinstance(backend, ClaudeBackend)
+    assert backend._config.command == "custom-claude"
+    assert backend._config.turn_timeout_ms == 42
+    assert backend._config.allowed_tools == ("jira",)
 
 
 def test_turn_result_tracks_events() -> None:

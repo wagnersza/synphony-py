@@ -1,11 +1,11 @@
 from datetime import timedelta
 
 import pytest
-from fakes import FakeAgentBackend, FakeAgentTurn
 
 from synphony.agents.base import AgentTurnInput
 from synphony.errors import AgentTimeoutError
 from synphony.models import AgentEvent, Issue, Workspace
+from tests.fakes import FakeAgentBackend, FakeAgentTurn
 
 
 def _turn_input(make_issue: Issue, *, session_id: str | None = None) -> AgentTurnInput:

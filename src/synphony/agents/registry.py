@@ -2,15 +2,15 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from datetime import timedelta
-
-from synphony.agents.base import AgentBackend, AgentTurnInput, AgentTurnResult
-from synphony.errors import AgentNotFoundError, AgentProtocolError
+from synphony.agents.base import AgentBackend
+from synphony.agents.claude import ClaudeBackend, ClaudeBackendConfig
+from synphony.agents.codex import CodexBackend
+from synphony.config import SynphonyConfig
+from synphony.errors import AgentNotFoundError
 
 
 class AgentRegistry:
-    """Small provider-id registry used by config and the future runner."""
+    """Small provider-id registry used by config and the runner."""
 
     def __init__(self) -> None:
         self._backends: dict[str, AgentBackend] = {}
@@ -34,30 +34,40 @@ class AgentRegistry:
             ) from exc
 
 
-@dataclass(frozen=True, slots=True)
-class _ReservedProviderBackend:
-    """Registry placeholder until real provider adapters land in Phase 5."""
-
-    provider: str
-
-    def start_session(self, turn: AgentTurnInput) -> AgentTurnResult:
-        raise AgentProtocolError(
-            f"{self.provider} backend is not implemented yet",
-            details={"provider": self.provider},
-        )
-
-    def continue_session(self, turn: AgentTurnInput) -> AgentTurnResult:
-        raise AgentProtocolError(
-            f"{self.provider} backend is not implemented yet",
-            details={"provider": self.provider},
-        )
-
-    def stop_session(self, session_id: str, *, timeout: timedelta | None = None) -> None:
-        return None
-
-
-def create_default_registry() -> AgentRegistry:
+def create_default_registry(config: SynphonyConfig | None = None) -> AgentRegistry:
     registry = AgentRegistry()
-    registry.register(_ReservedProviderBackend(provider="codex"))
-    registry.register(_ReservedProviderBackend(provider="claude"))
+    registry.register(_build_codex_backend(config))
+    registry.register(_build_claude_backend(config))
     return registry
+
+
+def _build_codex_backend(config: SynphonyConfig | None) -> CodexBackend:
+    if config is None or "codex" not in config.raw:
+        return CodexBackend()
+    return CodexBackend(
+        command=config.codex_command,
+        approval_policy=config.codex_approval_policy,
+        thread_sandbox=config.codex_thread_sandbox,
+        turn_sandbox_policy=config.codex_turn_sandbox_policy,
+        read_timeout_ms=config.codex_read_timeout_ms,
+        turn_timeout_ms=config.codex_turn_timeout_ms,
+    )
+
+
+def _build_claude_backend(config: SynphonyConfig | None) -> ClaudeBackend:
+    if config is None or "claude" not in config.raw:
+        return ClaudeBackend(ClaudeBackendConfig())
+    return ClaudeBackend(
+        ClaudeBackendConfig(
+            command=config.claude_command,
+            turn_timeout_ms=config.claude_turn_timeout_ms,
+            stall_timeout_ms=config.claude_stall_timeout_ms,
+            bare=config.claude_bare,
+            verbose=config.claude_verbose,
+            include_partial_messages=config.claude_include_partial_messages,
+            permission_mode=config.claude_permission_mode,
+            allowed_tools=tuple(config.claude_allowed_tools),
+            max_turns=config.claude_max_turns,
+            extra_args=tuple(config.claude_extra_args),
+        )
+    )
