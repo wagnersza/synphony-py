@@ -44,6 +44,30 @@ class SynphonyConfig:
         return str(Path(self._resolve_env(value)).expanduser())
 
     @property
+    def hook_after_create(self) -> str | None:
+        return self._optional_str(("hooks", "after_create"))
+
+    @property
+    def hook_before_run(self) -> str | None:
+        return self._optional_str(("hooks", "before_run"))
+
+    @property
+    def hook_after_run(self) -> str | None:
+        return self._optional_str(("hooks", "after_run"))
+
+    @property
+    def hook_before_remove(self) -> str | None:
+        return self._optional_str(("hooks", "before_remove"))
+
+    @property
+    def hook_timeout_ms(self) -> int:
+        return self._optional_positive_int(("hooks", "timeout_ms"), default=60000)
+
+    @property
+    def hook_timeout_s(self) -> float:
+        return self.hook_timeout_ms / 1000
+
+    @property
     def polling_interval_ms(self) -> int:
         return self._optional_int(("polling", "interval_ms"), default=5000)
 
@@ -55,6 +79,16 @@ class SynphonyConfig:
         if not self.provider_command.strip():
             raise ConfigValidationError(f"{self.agent_provider}.command must not be empty")
         _ = self.workspace_root
+        self._validate_hooks()
+        _ = self.hook_timeout_ms
+
+    def _validate_hooks(self) -> None:
+        hooks = self._lookup(("hooks",), required=False)
+        if hooks is not None and not isinstance(hooks, dict):
+            raise ConfigValidationError("hooks must be a mapping")
+        workspace_hooks = self._lookup(("workspace", "hooks"), required=False)
+        if workspace_hooks is not None:
+            raise ConfigValidationError("workspace.hooks is unsupported; use top-level hooks")
 
     def _required_str(self, path: tuple[str, ...]) -> str:
         value = self._lookup(path)
@@ -76,6 +110,12 @@ class SynphonyConfig:
             return default
         if not isinstance(value, int):
             raise ConfigValidationError(f"{'.'.join(path)} must be an integer")
+        return value
+
+    def _optional_positive_int(self, path: tuple[str, ...], *, default: int) -> int:
+        value = self._optional_int(path, default=default)
+        if value < 1:
+            raise ConfigValidationError(f"{'.'.join(path)} must be at least 1")
         return value
 
     def _lookup(self, path: tuple[str, ...], *, required: bool = True) -> Any:

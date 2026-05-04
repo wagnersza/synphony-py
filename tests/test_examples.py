@@ -18,4 +18,6 @@ def test_example_workflows_parse_and_validate() -> None:
         assert config.tracker_kind == "jira"
         assert config.agent_provider in {"claude", "codex"}
         assert config.provider_command
+        assert config.hook_before_run == "uv sync"
+        assert config.hook_timeout_ms == 60000
         assert "{{ issue.identifier }}" in workflow.prompt_template

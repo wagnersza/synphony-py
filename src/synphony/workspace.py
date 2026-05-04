@@ -8,9 +8,12 @@ from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from pathlib import Path
 
-from synphony.errors import WorkspaceHookError
+from synphony.errors import WorkspaceHookError, WorkspacePathError
+from synphony.logging import get_logger
 from synphony.models import Workspace, workspace_key_from_identifier
 from synphony.path_safety import reject_path_traversal, safe_child_path
+
+_LOGGER = get_logger("workspace")
 
 
 @dataclass(frozen=True, slots=True)
@@ -44,7 +47,7 @@ class WorkspaceManager:
         hook_timeout_s: float = 30,
         hook_shell: tuple[str, str] = ("sh", "-lc"),
     ) -> None:
-        self._root = Path(root).expanduser()
+        self._root = Path(root).expanduser().resolve()
         self._hooks = hooks or WorkspaceHooks()
         self._runner = runner or self._build_subprocess_runner(hook_shell)
         self._hook_timeout_s = hook_timeout_s
@@ -56,27 +59,43 @@ class WorkspaceManager:
     def prepare(self, issue_identifier: str) -> Workspace:
         reject_path_traversal(issue_identifier)
         key = workspace_key_from_identifier(issue_identifier)
+        self._ensure_root_is_directory()
         path = safe_child_path(self._root, key)
         created_now = not path.exists()
-        path.mkdir(parents=True, exist_ok=True)
+        if path.exists() and not path.is_dir():
+            raise WorkspacePathError(
+                "workspace path must be a directory",
+                details={"path": str(path), "root": str(self._root)},
+            )
+        try:
+            path.mkdir(parents=True, exist_ok=True)
+        except OSError as exc:
+            raise WorkspacePathError(
+                "workspace path could not be created",
+                details={"path": str(path), "root": str(self._root)},
+            ) from exc
 
         workspace = Workspace(path=str(path), key=key, created_now=created_now)
         if created_now:
-            self._run_hook(self._hooks.after_create, workspace)
+            try:
+                self._run_required_hook(self._hooks.after_create, workspace)
+            except WorkspaceHookError:
+                self.remove(workspace)
+                raise
         return workspace
 
     def run_before_run(self, workspace: Workspace) -> None:
-        self._run_hook(self._hooks.before_run, workspace)
+        self._run_required_hook(self._hooks.before_run, workspace)
 
     def run_after_run(self, workspace: Workspace) -> None:
-        self._run_hook(self._hooks.after_run, workspace)
+        self._run_best_effort_hook(self._hooks.after_run, workspace)
 
     def remove(self, workspace: Workspace) -> bool:
         path = safe_child_path(self._root, workspace.key)
         if not path.exists():
             return False
 
-        self._run_hook(self._hooks.before_remove, workspace)
+        self._run_best_effort_hook(self._hooks.before_remove, workspace)
         shutil.rmtree(path, ignore_errors=True)
         return not path.exists()
 
@@ -91,6 +110,51 @@ class WorkspaceManager:
             if self.remove(workspace):
                 removed.append(workspace.path)
         return removed
+
+    def preflight_agent_launch(self, workspace: Workspace, *, cwd: str | Path) -> None:
+        """Validate the launch cwd is exactly the prepared workspace under root."""
+        expected_path = safe_child_path(self._root, workspace.key)
+        workspace_path = Path(workspace.path).expanduser().resolve()
+        if workspace_path != expected_path:
+            raise WorkspacePathError(
+                "workspace path does not match configured root",
+                details={
+                    "root": str(self._root),
+                    "expected_path": str(expected_path),
+                    "workspace_path": str(workspace_path),
+                },
+            )
+        if not workspace_path.is_dir():
+            raise WorkspacePathError(
+                "workspace path must be a directory",
+                details={"path": str(workspace_path), "root": str(self._root)},
+            )
+
+        cwd_path = Path(cwd).expanduser().resolve()
+        if cwd_path != workspace_path:
+            raise WorkspacePathError(
+                "agent launch cwd must be the exact workspace path",
+                details={"cwd": str(cwd_path), "workspace_path": str(workspace_path)},
+            )
+
+    def _ensure_root_is_directory(self) -> None:
+        if self._root.exists() and not self._root.is_dir():
+            raise WorkspacePathError(
+                "workspace root must be a directory",
+                details={"root": str(self._root)},
+            )
+
+    def _run_required_hook(self, command: str | None, workspace: Workspace) -> None:
+        self._run_hook(command, workspace)
+
+    def _run_best_effort_hook(self, command: str | None, workspace: Workspace) -> None:
+        try:
+            self._run_hook(command, workspace)
+        except WorkspaceHookError as exc:
+            _LOGGER.warning(
+                "workspace hook failed; ignoring",
+                extra={"error_code": exc.code, "workspace_path": exc.details.get("path")},
+            )
 
     def _run_hook(self, command: str | None, workspace: Workspace) -> None:
         if command is None:

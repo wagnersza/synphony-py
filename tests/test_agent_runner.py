@@ -5,7 +5,7 @@ from pathlib import Path
 from fakes import FakeAgentBackend
 
 from synphony.agent_runner import AgentRunConfig, AgentRunner, StopReason
-from synphony.models import Issue, RunAttempt
+from synphony.models import Issue, RunAttempt, Workspace
 from synphony.workspace import HookResult, WorkspaceHooks, WorkspaceManager
 
 
@@ -46,6 +46,35 @@ def test_runner_renders_first_prompt_runs_hooks_and_stops_session(
         "after-create:demo-1",
         "before-run:demo-1",
         "after-run:demo-1",
+    ]
+
+
+def test_runner_preflights_agent_launch_workspace(
+    tmp_path: Path,
+    make_issue: Issue,
+) -> None:
+    class RecordingWorkspaceManager(WorkspaceManager):
+        def __init__(self, *, root: Path) -> None:
+            super().__init__(root=root)
+            self.preflight_calls: list[tuple[str, str]] = []
+
+        def preflight_agent_launch(self, workspace: Workspace, *, cwd: str | Path) -> None:
+            self.preflight_calls.append((workspace.path, str(cwd)))
+            super().preflight_agent_launch(workspace, cwd=cwd)
+
+    workspace_manager = RecordingWorkspaceManager(root=tmp_path)
+    runner = AgentRunner(
+        backend=FakeAgentBackend(provider="codex"),
+        workspace_manager=workspace_manager,
+        prompt_template="Work on {{ issue.identifier }}",
+        config=AgentRunConfig(active_state_names=("Ready",)),
+        issue_state_fetcher=lambda issue_ids: {issue_id: "Done" for issue_id in issue_ids},
+    )
+
+    runner.run(make_issue, RunAttempt("10001", "DEMO-1", 1))
+
+    assert workspace_manager.preflight_calls == [
+        (str(tmp_path / "demo-1"), str(tmp_path / "demo-1"))
     ]
 
 

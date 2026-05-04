@@ -6,6 +6,7 @@ from collections.abc import Callable, Collection, Mapping
 from dataclasses import dataclass
 from datetime import timedelta
 from enum import Enum
+from pathlib import Path
 
 from synphony.agents.base import AgentBackend, AgentEventCallback, AgentTurnInput, AgentTurnResult
 from synphony.models import AgentEvent, Issue, RunAttempt, Workspace, normalize_state_name
@@ -172,6 +173,10 @@ class AgentRunner:
         )
 
     def _run_backend_turn(self, turn: AgentTurnInput) -> AgentTurnResult:
+        self._workspace_manager.preflight_agent_launch(
+            turn.workspace,
+            cwd=Path(turn.workspace.path),
+        )
         if turn.session_id is None:
             return self._backend.start_session(turn)
         return self._backend.continue_session(turn)

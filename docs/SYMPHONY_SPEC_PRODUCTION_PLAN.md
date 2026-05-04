@@ -53,8 +53,8 @@ reloads.
 retries, and runtime state.
 - In-memory tracker for deterministic tests.
 - Jira `acli` tracker adapter with JSON parsing and basic error mapping.
-- Workspace manager with deterministic paths, root containment checks, and
-lifecycle hooks.
+- Workspace manager with deterministic paths, root containment checks,
+collision handling, launch preflight, and lifecycle hook failure semantics.
 - Provider-neutral `AgentBackend` protocol, fake test backend, registry
 placeholders for `codex` and `claude`.
 - Provider-neutral `AgentRunner` loop using fake backends.
@@ -102,9 +102,15 @@ Use these tasks as the implementation backlog. Each task is intended to be small
 enough for one focused implementation session and should leave the repository in
 a passing state.
 
+Task checkbox status is the source of truth for this plan:
+
+- `[x]` Done and verified.
+- `[ ]` Not done yet; needs implementation or completion against the listed
+acceptance criteria.
+
 ### Foundation and Contracts
 
-#### Task 1: Document the Jira and Claude Compliance Profile
+#### [ ] Task 1: Document the Jira and Claude Compliance Profile
 
 **Description:** Record the intentional departures from the Linear/Codex
 upstream spec and define the production contract for `tracker.kind: jira` and
@@ -133,7 +139,7 @@ questions that block implementation.
 
 **Estimated scope:** Small.
 
-#### Task 2: Make Workflow Front Matter Spec-Compatible
+#### [ ] Task 2: Make Workflow Front Matter Spec-Compatible
 
 **Description:** Update workflow loading so front matter is optional and prompt
 body trimming matches the spec.
@@ -160,7 +166,7 @@ errors.
 
 **Estimated scope:** Small.
 
-#### Task 3: Resolve Workflow-Relative Paths
+#### [ ] Task 3: Resolve Workflow-Relative Paths
 
 **Description:** Teach config resolution where the selected workflow file lives
 so relative `workspace.root` values resolve relative to that file rather than the
@@ -188,7 +194,7 @@ directory.
 
 **Estimated scope:** Small.
 
-#### Task 4: Add Runtime Config Getters
+#### [ ] Task 4: Add Runtime Config Getters
 
 **Description:** Add typed getters for every runtime field needed by the
 orchestrator, workspace manager, Jira tracker, and Claude backend.
@@ -216,7 +222,9 @@ commands, hook timeout, provider command, and provider timeouts.
 
 **Estimated scope:** Medium.
 
-#### Task 5: Move Hook Config to Top-Level `hooks`
+#### [x] Task 5: Move Hook Config to Top-Level `hooks`
+
+**Status:** Done on 2026-05-04.
 
 **Description:** Align examples and config access with the spec's top-level
 `hooks` block instead of `workspace.hooks`.
@@ -231,8 +239,8 @@ unsupported.
 
 **Verification:**
 
-- Extend `tests/test_config.py` and `tests/test_examples.py`.
-- Run `uv run pytest tests/test_config.py tests/test_examples.py`.
+- Done: extended `tests/test_config.py` and `tests/test_examples.py`.
+- Done: ran `uv run pytest tests/test_config.py tests/test_examples.py`.
 
 **Dependencies:** Task 4.
 
@@ -248,7 +256,7 @@ unsupported.
 
 ### Data Model and Workspace Safety
 
-#### Task 6: Normalize Jira Issue Fields
+#### [ ] Task 6: Normalize Jira Issue Fields
 
 **Description:** Update issue normalization so Jira labels, blockers, and
 optional metadata are represented consistently with the spec-compatible internal
@@ -277,7 +285,7 @@ prompt rendering.
 
 **Estimated scope:** Medium.
 
-#### Task 7: Enrich Live Session and Retry State
+#### [ ] Task 7: Enrich Live Session and Retry State
 
 **Description:** Add provider-neutral runtime fields needed for retries,
 observability, usage accounting, and stall detection.
@@ -306,7 +314,9 @@ backoff.
 
 **Estimated scope:** Medium.
 
-#### Task 8: Fix Workspace Collision and Hook Failure Semantics
+#### [x] Task 8: Fix Workspace Collision and Hook Failure Semantics
+
+**Status:** Done on 2026-05-04.
 
 **Description:** Make workspace creation and hooks match the spec's failure
 semantics, including best-effort cleanup hooks.
@@ -320,9 +330,10 @@ semantics, including best-effort cleanup hooks.
 
 **Verification:**
 
-- Extend `tests/test_workspace.py` for non-directory collision and ignored
-hook failures.
-- Run `uv run pytest tests/test_workspace.py tests/test_logging.py`.
+- Done: extended `tests/test_workspace.py` for non-directory collision,
+top-level `hooks.timeout_ms`, fatal `after_create`/`before_run` behavior, and
+ignored `after_run`/`before_remove` failures.
+- Done: ran `uv run pytest tests/test_workspace.py tests/test_logging.py`.
 
 **Dependencies:** Task 5.
 
@@ -335,7 +346,9 @@ hook failures.
 
 **Estimated scope:** Medium.
 
-#### Task 9: Add Agent Launch Workspace Preflight
+#### [x] Task 9: Add Agent Launch Workspace Preflight
+
+**Status:** Done on 2026-05-04.
 
 **Description:** Add a shared preflight check that validates the agent subprocess
 will launch from the exact per-issue workspace under the configured root.
@@ -348,9 +361,9 @@ will launch from the exact per-issue workspace under the configured root.
 
 **Verification:**
 
-- Extend `tests/test_agent_runner.py` or backend tests once the preflight
-helper exists.
-- Run `uv run pytest tests/test_agent_runner.py tests/test_workspace.py`.
+- Done: added `WorkspaceManager.preflight_agent_launch()` coverage and runner
+coverage that checks preflight before backend launch.
+- Done: ran `uv run pytest tests/test_agent_runner.py tests/test_workspace.py`.
 
 **Dependencies:** Task 8.
 
@@ -365,7 +378,7 @@ helper exists.
 
 ### Jira Tracker
 
-#### Task 10: Add Empty-State and Pagination Behavior to Jira Tracker
+#### [ ] Task 10: Add Empty-State and Pagination Behavior to Jira Tracker
 
 **Description:** Harden candidate and by-state Jira reads for production-scale
 queries.
@@ -392,7 +405,7 @@ limit.
 
 **Estimated scope:** Medium.
 
-#### Task 11: Improve Jira State Refresh for Reconciliation
+#### [ ] Task 11: Improve Jira State Refresh for Reconciliation
 
 **Description:** Make running-issue refresh efficient and rich enough for
 orchestrator reconciliation.
@@ -421,7 +434,7 @@ and add concurrency/timeout safeguards.
 
 **Estimated scope:** Medium.
 
-#### Task 12: Complete Jira Error Taxonomy
+#### [ ] Task 12: Complete Jira Error Taxonomy
 
 **Description:** Map real `acli` failure modes to stable Synphony errors for
 operators and retry decisions.
@@ -449,7 +462,7 @@ payloads.
 
 **Estimated scope:** Small.
 
-#### Task 13: Capture Real Jira Command Fixtures
+#### [ ] Task 13: Capture Real Jira Command Fixtures
 
 **Description:** Verify the target `acli` commands against the authenticated Jira
 environment and save sanitized fixtures for tests.
@@ -478,7 +491,7 @@ exist.
 
 ### Claude Backend
 
-#### Task 14: Spike the Claude Code CLI Contract
+#### [ ] Task 14: Spike the Claude Code CLI Contract
 
 **Description:** Discover and document the machine-safe Claude Code CLI flow
 before implementing the backend.
@@ -506,7 +519,7 @@ behavior, and user-input behavior.
 
 **Estimated scope:** Medium.
 
-#### Task 15: Add `ClaudeBackend` Process Runner
+#### [ ] Task 15: Add `ClaudeBackend` Process Runner
 
 **Description:** Implement the first-turn Claude backend path using the
 documented CLI contract.
@@ -534,7 +547,7 @@ paths.
 
 **Estimated scope:** Medium.
 
-#### Task 16: Implement Claude Continuation Policy
+#### [ ] Task 16: Implement Claude Continuation Policy
 
 **Description:** Add continuation behavior based on the spike result: true
 session resume when supported, or a documented clear failure when unsupported.
@@ -563,7 +576,7 @@ failure.
 
 **Estimated scope:** Medium.
 
-#### Task 17: Normalize Claude Events and Usage
+#### [ ] Task 17: Normalize Claude Events and Usage
 
 **Description:** Parse Claude output into provider-neutral events and usage data
 where the CLI exposes it.
@@ -593,7 +606,7 @@ unavailable.
 
 **Estimated scope:** Medium.
 
-#### Task 18: Wire Backend Factory for Claude
+#### [ ] Task 18: Wire Backend Factory for Claude
 
 **Description:** Replace the placeholder Claude registry entry with real
 construction from workflow config.
@@ -623,7 +636,7 @@ explicitly out of scope.
 
 ### Agent Runner
 
-#### Task 19: Make `after_run` Best-Effort in Agent Runner
+#### [ ] Task 19: Make `after_run` Best-Effort in Agent Runner
 
 **Description:** Ensure `after_run` always runs after an attempt and never masks
 the primary attempt result.
@@ -650,7 +663,7 @@ cancellation paths when a workspace exists.
 
 **Estimated scope:** Medium.
 
-#### Task 20: Classify Agent Runner Stop Reasons
+#### [ ] Task 20: Classify Agent Runner Stop Reasons
 
 **Description:** Expand runner outcomes so orchestrator retry logic can
 distinguish normal exits from failure classes.
@@ -679,7 +692,7 @@ consistently.
 
 **Estimated scope:** Medium.
 
-#### Task 21: Forward Runner Events for Orchestrator State Updates
+#### [ ] Task 21: Forward Runner Events for Orchestrator State Updates
 
 **Description:** Make runner/provider events update live session timestamps,
 turn count, messages, usage, and rate limits through a callback contract.
@@ -707,7 +720,7 @@ turn count, messages, usage, and rate limits through a callback contract.
 
 ### Orchestrator and Service Loop
 
-#### Task 22: Add Startup Terminal Workspace Cleanup
+#### [ ] Task 22: Add Startup Terminal Workspace Cleanup
 
 **Description:** Wire the tracker's terminal-state query to workspace cleanup at
 service startup.
@@ -733,7 +746,7 @@ service startup.
 
 **Estimated scope:** Small.
 
-#### Task 23: Implement Poll Tick Sequencing
+#### [ ] Task 23: Implement Poll Tick Sequencing
 
 **Description:** Add a deterministic tick function that reconciles, validates,
 fetches candidates, dispatches, and reports observability state in spec order.
@@ -759,7 +772,7 @@ fetches candidates, dispatches, and reports observability state in spec order.
 
 **Estimated scope:** Medium.
 
-#### Task 24: Correct Dispatch Eligibility and Blocker Policy
+#### [ ] Task 24: Correct Dispatch Eligibility and Blocker Policy
 
 **Description:** Align dispatch eligibility with the selected Jira blocker
 policy and spec sorting/capacity rules.
@@ -786,7 +799,7 @@ retrying, global capacity, per-state capacity, and blockers.
 
 **Estimated scope:** Medium.
 
-#### Task 25: Implement Worker Launch and Live Session Tracking
+#### [ ] Task 25: Implement Worker Launch and Live Session Tracking
 
 **Description:** Add the worker execution model that lets the orchestrator own
 live sessions while agent runs execute concurrently.
@@ -814,7 +827,7 @@ reconciliation/shutdown.
 
 **Estimated scope:** Large. Split if needed.
 
-#### Task 26: Implement Retry Timers and Backoff Semantics
+#### [ ] Task 26: Implement Retry Timers and Backoff Semantics
 
 **Description:** Complete retry behavior for normal continuation, failures,
 slot exhaustion, and retry timer firing.
@@ -842,7 +855,7 @@ eligible.
 
 **Estimated scope:** Medium.
 
-#### Task 27: Implement Stall Detection and Reconciliation Stops
+#### [ ] Task 27: Implement Stall Detection and Reconciliation Stops
 
 **Description:** Use provider-neutral last-event timestamps and tracker state
 refreshes to stop or retry running sessions.
@@ -868,7 +881,7 @@ refreshes to stop or retry running sessions.
 
 **Estimated scope:** Medium.
 
-#### Task 28: Wire Dynamic Workflow Reload into Runtime
+#### [ ] Task 28: Wire Dynamic Workflow Reload into Runtime
 
 **Description:** Re-apply workflow/config changes during service operation while
 keeping the last known good config on invalid reloads.
@@ -896,7 +909,7 @@ keeping the last known good config on invalid reloads.
 
 ### CLI, Observability, and Integration
 
-#### Task 29: Start the Production CLI Host
+#### [ ] Task 29: Start the Production CLI Host
 
 **Description:** Replace disabled run mode with a host process that builds the
 runtime objects and starts the long-running service.
@@ -922,7 +935,7 @@ runtime objects and starts the long-running service.
 
 **Estimated scope:** Medium.
 
-#### Task 30: Add Graceful Shutdown
+#### [ ] Task 30: Add Graceful Shutdown
 
 **Description:** Handle SIGINT/SIGTERM by stopping dispatch, terminating active
 sessions, running best-effort hooks where appropriate, and flushing logs.
@@ -949,7 +962,7 @@ sessions, running best-effort hooks where appropriate, and flushing logs.
 
 **Estimated scope:** Medium.
 
-#### Task 31: Add Optional `--once` Smoke Path
+#### [ ] Task 31: Add Optional `--once` Smoke Path
 
 **Description:** Add a non-production helper that runs exactly one eligible Jira
 issue through Claude for local validation.
@@ -975,7 +988,7 @@ issue through Claude for local validation.
 
 **Estimated scope:** Small.
 
-#### Task 32: Complete Structured Runtime Logging
+#### [ ] Task 32: Complete Structured Runtime Logging
 
 **Description:** Ensure logs cover the required operator-visible lifecycle and
 context fields.
@@ -1003,7 +1016,7 @@ reconciliation, tracker, agent, and shutdown events.
 
 **Estimated scope:** Medium.
 
-#### Task 33: Add Gated Jira and Claude Integration Tests
+#### [ ] Task 33: Add Gated Jira and Claude Integration Tests
 
 **Description:** Add real integration tests that are skipped by default and prove
 the production profile against safe external systems.
@@ -1033,7 +1046,7 @@ in an authenticated test environment.
 
 **Estimated scope:** Medium.
 
-#### Task 34: Add CI and Release Gate Documentation
+#### [ ] Task 34: Add CI and Release Gate Documentation
 
 **Description:** Define the repeatable quality gates for normal development and
 the optional real integration profile for production readiness.

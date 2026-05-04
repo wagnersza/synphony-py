@@ -34,6 +34,42 @@ def test_config_validates_selected_claude_provider() -> None:
     assert config.provider_command == "claude --print"
 
 
+def test_config_reads_top_level_hook_commands_and_timeout() -> None:
+    config = SynphonyConfig.from_mapping(
+        {
+            "tracker": {"kind": "jira", "jql": "project = DEMO"},
+            "agent": {"provider": "codex"},
+            "codex": {"command": "codex app-server"},
+            "hooks": {
+                "after_create": "echo created",
+                "before_run": "uv sync",
+                "after_run": "echo done",
+                "before_remove": "echo remove",
+                "timeout_ms": 2500,
+            },
+        }
+    )
+
+    assert config.hook_after_create == "echo created"
+    assert config.hook_before_run == "uv sync"
+    assert config.hook_after_run == "echo done"
+    assert config.hook_before_remove == "echo remove"
+    assert config.hook_timeout_ms == 2500
+    assert config.hook_timeout_s == 2.5
+
+
+def test_config_rejects_workspace_hooks_block() -> None:
+    with pytest.raises(ConfigValidationError, match="workspace.hooks"):
+        SynphonyConfig.from_mapping(
+            {
+                "tracker": {"kind": "jira", "jql": "project = DEMO"},
+                "agent": {"provider": "codex"},
+                "codex": {"command": "codex app-server"},
+                "workspace": {"hooks": {"before_run": "uv sync"}},
+            }
+        )
+
+
 def test_config_rejects_unsupported_tracker() -> None:
     with pytest.raises(ConfigValidationError, match="tracker.kind"):
         SynphonyConfig.from_mapping(

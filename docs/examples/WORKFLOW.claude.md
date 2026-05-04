@@ -10,8 +10,10 @@ tracker:
 
 workspace:
   root: .synphony/workspaces
-  hooks:
-    before_run: uv sync
+
+hooks:
+  before_run: uv sync
+  timeout_ms: 60000
 
 agent:
   provider: claude
