@@ -48,17 +48,24 @@ class FakeAgentBackend:
         self._turn_count = 0
         self._script_index = 0
         self._stopped_sessions: list[str] = []
+        self._turn_inputs: list[AgentTurnInput] = []
 
     @property
     def stopped_sessions(self) -> tuple[str, ...]:
         return tuple(self._stopped_sessions)
 
+    @property
+    def turn_inputs(self) -> tuple[AgentTurnInput, ...]:
+        return tuple(self._turn_inputs)
+
     def start_session(self, turn: AgentTurnInput) -> AgentTurnResult:
+        self._turn_inputs.append(turn)
         self._session_count += 1
         session_id = f"{self.provider}:fake-session-{self._session_count}"
         return self._run_turn(turn, session_id=session_id, include_session_started=True)
 
     def continue_session(self, turn: AgentTurnInput) -> AgentTurnResult:
+        self._turn_inputs.append(turn)
         if turn.session_id is None:
             msg = "fake continuation requires an existing session_id"
             raise ValueError(msg)

@@ -37,7 +37,16 @@ uv run ruff format --check .
 uv run mypy
 ```
 
-The `synphony` console script is reserved but not wired to the orchestrator yet. CLI execution is planned for Phase 6 in [`PLAN.md`](PLAN.md).
+Validate a workflow before starting the daemon path:
+
+```bash
+uv run synphony --check docs/examples/WORKFLOW.codex.md
+uv run synphony --check docs/examples/WORKFLOW.claude.md
+```
+
+The `synphony` run mode is intentionally disabled until the real Codex and
+Claude backends are implemented. `--check` is available now for workflow/config
+validation.
 
 ## Workflow Configuration
 
@@ -76,6 +85,9 @@ claude:
 ```
 
 Exact Jira fields, Claude CLI options, and provider-specific timeout keys are still subject to the `acli` and Claude CLI spikes in [`PLAN.md`](PLAN.md).
+See [`docs/examples/WORKFLOW.codex.md`](docs/examples/WORKFLOW.codex.md) and
+[`docs/examples/WORKFLOW.claude.md`](docs/examples/WORKFLOW.claude.md) for
+complete starting points.
 
 ## Architecture
 
