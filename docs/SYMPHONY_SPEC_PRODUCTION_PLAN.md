@@ -110,7 +110,7 @@ acceptance criteria.
 
 ### Foundation and Contracts
 
-#### [ ] Task 1: Document the Jira and Claude Compliance Profile
+#### [x] Task 1: Document the Jira and Claude Compliance Profile
 
 **Description:** Record the intentional departures from the Linear/Codex
 upstream spec and define the production contract for `tracker.kind: jira` and

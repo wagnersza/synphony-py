@@ -44,9 +44,17 @@ uv run synphony --check docs/examples/WORKFLOW.codex.md
 uv run synphony --check docs/examples/WORKFLOW.claude.md
 ```
 
-The `synphony` run mode is intentionally disabled until the real Codex and
-Claude backends are implemented. `--check` is available now for workflow/config
-validation.
+The `synphony` run mode is intentionally disabled until the Claude backend and
+production service loop are implemented. `--check` is available now for
+workflow/config validation.
+
+`synphony --once <WORKFLOW.md>` will exist as a local smoke-test helper only.
+It attempts at most one eligible issue and exits. The production entry point is
+the long-running `synphony <WORKFLOW.md>` daemon.
+
+See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full compliance
+profile: Jira as the tracker extension, Claude as the agent extension,
+tracker-write boundary, and Claude approval policy.
 
 ## Workflow Configuration
 
